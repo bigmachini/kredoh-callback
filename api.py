@@ -1,9 +1,15 @@
+from typing import Optional, Dict
+
 import uvicorn
 from fastapi import FastAPI, Path
-from typing import NamedTuple, Optional
+from google.cloud import firestore
 from pydantic import BaseModel
 
 app = FastAPI()
+
+db = firestore.Client()
+
+debug = True
 
 
 @app.get("/")
@@ -45,9 +51,59 @@ async def at_airtime_callback(at_callback: ATCallback):
 
 
 # Kyanda callbacks
+class KyandaCallback(BaseModel):
+    category: str
+    source: str
+    destination: str
+    MerchantID: str
+    details: Dict
+    status: str
+    status_code: str
+    message: str
+    transactionDate: str
+    transactionRef: str
+    amount: str
+
+
 @app.post("/kyanda-callback")
-async def kyanda_callback():
-    return {"Hello": "World"}
+async def kyanda_callback(kyanda_callback: KyandaCallback):
+    """
+    This callback will be called when transactions are processed via kyanda
+    The data is in the format:\n
+        {
+            "category": "UtilityPayment",
+            "source": "PaymentWallet",
+            "destination": "0715330000",
+            "MerchantID": "kyanda",
+            "details": { biller_receiptNo: 0105781244210},
+            "status": "Success",
+            "status_code":"0000",
+            "message":"Your Request has been processed successfully.",
+            "transactionDate": "20210401091002",
+            "transactionRef": "KYAAPI_______",
+            "amount": "1500"
+        }
+    :return:\n
+        { "status" : "Success/Exists/Failed" }
+    *Success* --> record was added to firestore successfully\n
+    *Exists* --> record already exists in firestore\n
+    *Failed* --> Exception occurred
+    """
+    try:
+        table_name = 'KYANDA_IPN_TRANSACTION'
+        if debug:
+            table_name += '_TEST'
+        kyanda_callback.transactionRef
+        doc_ref = db.collection(table_name.lower()).document(kyanda_callback.transactionRef)
+        doc = doc_ref.get()
+        status = 'Exists'
+        if not doc.exists:
+            doc_ref.set(dict(kyanda_callback))
+            status = 'Success'
+
+        return {"status": status}
+    except Exception as ex:
+        return {"status": 'Failed'}
 
 
 # mpesa callbacks
