@@ -1,15 +1,31 @@
 from typing import Optional, Dict
 
 import uvicorn
-from fastapi import FastAPI, Path
+from fastapi import FastAPI, Path, Request
 from google.cloud import firestore
-from pydantic import BaseModel
+
+from kredoh.callbacks.schemas import ATCallback, KyandaCallback, StkPushCallback
 
 app = FastAPI()
 
-db = firestore.Client()
-
 debug = True
+
+
+def store_to_firestore(ref: str, data: Dict, path: str):
+    table_name = 'CALLBACKS'
+    if debug:
+        table_name += '_TEST'
+    db = firestore.Client()
+    doc_ref = db.collection(table_name.lower()).document(ref)
+    doc = doc_ref.get()
+    if not doc.exists:
+        content = {'path': path,
+                   'data': data,
+                   'ref': ref}
+        doc_ref.set(content)
+        return True
+
+    return False
 
 
 @app.get("/")
@@ -20,17 +36,8 @@ async def index(*, service_id: int = Path(None, description="The ID of the servi
 
 
 # africastalking callbacks
-class ATCallback(BaseModel):
-    phoneNumber: str
-    description: str
-    status: str
-    requestId: str
-    discount: str
-    value: str
-
-
 @app.post("/at-airtime-callback")
-async def at_airtime_callback(at_callback: ATCallback):
+async def at_airtime_callback(at_callback: ATCallback, request: Request):
     """
     This endpoint is called when airtime is disbursed using AT(Africastalking) channel
     The data comes in this format:\n
@@ -47,26 +54,16 @@ async def at_airtime_callback(at_callback: ATCallback):
             'status' : 'Success'
         }
     """
-    return at_callback
+    try:
+        result = store_to_firestore(at_callback.requestId, at_callback.dict(), request.url.path)
+        return {"status": 'Success' if result else 'Exists'}
+    except Exception as ex:
+        return {"status": 'Failed'}
 
 
 # Kyanda callbacks
-class KyandaCallback(BaseModel):
-    category: str
-    source: str
-    destination: str
-    MerchantID: str
-    details: Dict
-    status: str
-    status_code: str
-    message: str
-    transactionDate: str
-    transactionRef: str
-    amount: str
-
-
 @app.post("/kyanda-callback")
-async def kyanda_callback(kyanda_callback: KyandaCallback):
+async def kyanda_callback(kyanda_callback: KyandaCallback, request: Request):
     """
     This callback will be called when transactions are processed via kyanda
     The data is in the format:\n
@@ -90,26 +87,44 @@ async def kyanda_callback(kyanda_callback: KyandaCallback):
     *Failed* --> Exception occurred
     """
     try:
-        table_name = 'KYANDA_IPN_TRANSACTION'
-        if debug:
-            table_name += '_TEST'
-        kyanda_callback.transactionRef
-        doc_ref = db.collection(table_name.lower()).document(kyanda_callback.transactionRef)
-        doc = doc_ref.get()
-        status = 'Exists'
-        if not doc.exists:
-            doc_ref.set(dict(kyanda_callback))
-            status = 'Success'
-
-        return {"status": status}
+        result = store_to_firestore(kyanda_callback.transactionRef, kyanda_callback.dict(), request.url.path)
+        return {"status": 'Success' if result else 'Exists'}
     except Exception as ex:
         return {"status": 'Failed'}
 
 
 # mpesa callbacks
 @app.post("/stk-push-callback")
-async def stk_push_callback():
-    return {"Hello": "World"}
+async def stk_push_callback(stk_callback: StkPushCallback, request: Request):
+    """
+      This callback will be called when processing of stk_push is done
+      The data is in the format:
+      \n
+          {"Body":
+            {"stkCallback":
+                {"MerchantRequestID": "837-18118467-1",
+                "CheckoutRequestID": "ws_CO_30122021115014387894",
+                "ResultCode": 0,
+                "ResultDesc": "The service request is processed successfully.",
+                "CallbackMetadata": {"Item": [  {"Name": "Amount", "Value": 98},
+                                                {"Name": "MpesaReceiptNumber", "Value": "PLU4V8VK6Y"},
+                                                {"Name": "Balance"},
+                                                {"Name": "TransactionDate", "Value": 20211230115026},
+                                                {"Name": "PhoneNumber", "Value": 254721577602}]}}}}
+      \n
+      :return:
+      \n
+          { "status" : "Success/Exists/Failed" }
+      *Success* --> record was added to firestore successfully\n
+      *Exists* --> record already exists in firestore\n
+      *Failed* --> Exception occurred
+      """
+    try:
+        result = store_to_firestore(stk_callback.Body.stkCallback.MerchantRequestID, stk_callback.dict(),
+                                    request.url.path)
+        return {"status": 'Success' if result else 'Exists'}
+    except Exception as ex:
+        return {"status": 'Failed'}
 
 
 @app.post("/stk-reversal-callback")
