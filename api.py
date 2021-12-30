@@ -163,13 +163,13 @@ async def c2b_callback(c2b__callback: C2BCallback, request: Request):
         return {"status": 'Failed'}
 
 
-@app.post("/stk-reversal-callback")
-async def stk_reversal_callback():
+@app.post("/transaction-status-callback")
+async def c2b_callback():
     return {"Hello": "World"}
 
 
-@app.post("/transaction-status-callback")
-async def c2b_callback():
+@app.post("/stk-reversal-callback")
+async def stk_reversal_callback():
     return {"Hello": "World"}
 
 
