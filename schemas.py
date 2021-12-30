@@ -57,3 +57,26 @@ class StkPushCallbackBody(BaseModel):
 
 class StkPushCallback(BaseModel):
     Body: StkPushCallbackBody
+
+
+# mpesa c2b callback
+x = {'TransactionType': 'Customer Merchant Payment', 'TransID': 'PLU8V56Y5C', 'TransTime': '20211230104939',
+     'TransAmount': '98.00', 'BusinessShortCode': '7195415', 'BillRefNumber': '', 'InvoiceNumber': '',
+     'OrgAccountBalance': '11952.81', 'ThirdPartyTransID': '', 'MSISDN': '254708720306', 'FirstName': 'kenneth',
+     'MiddleName': 'kihanya', 'LastName': 'waweru'}
+
+
+class C2BCallback(BaseModel):
+    TransactionType: str
+    TransID: str
+    TransTime: str
+    TransAmount: str
+    BusinessShortCode: str
+    BillRefNumber: str
+    InvoiceNumber: str
+    OrgAccountBalance: str
+    ThirdPartyTransID: str
+    MSISDN: str
+    FirstName: str
+    MiddleName: str
+    LastName: str

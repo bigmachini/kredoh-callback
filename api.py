@@ -4,7 +4,7 @@ import uvicorn
 from fastapi import FastAPI, Path, Request
 from google.cloud import firestore
 
-from kredoh.callbacks.schemas import ATCallback, KyandaCallback, StkPushCallback
+from kredoh.callbacks.schemas import ATCallback, KyandaCallback, StkPushCallback, C2BCallback
 
 app = FastAPI()
 
@@ -127,13 +127,44 @@ async def stk_push_callback(stk_callback: StkPushCallback, request: Request):
         return {"status": 'Failed'}
 
 
+@app.post("/c2b-callback")
+async def c2b_callback(c2b__callback: C2BCallback, request: Request):
+    """
+         This callback will be called when processing of stk_push is done
+         The data is in the format:
+         \n
+             {
+                "TransactionType": "Customer Merchant Payment",
+                "TransID": "PLU8V00V00",
+                "TransTime": "20211230100000",
+                "TransAmount": "98.00",
+                "BusinessShortCode": "00000000",
+                "BillRefNumber": "",
+                "InvoiceNumber": "",
+                "OrgAccountBalance": "1000.00",
+                "ThirdPartyTransID": "",
+                "MSISDN": "254700000000",
+                "FirstName": "kenneth",
+                "MiddleName": "kihanya",
+                "LastName": "waweru"}
+         \n
+         :return:
+         \n
+             { "status" : "Success/Exists/Failed" }
+         *Success* --> record was added to firestore successfully\n
+         *Exists* --> record already exists in firestore\n
+         *Failed* --> Exception occurred
+    """
+    try:
+        result = store_to_firestore(c2b__callback.TransID, c2b__callback.dict(),
+                                    request.url.path)
+        return {"status": 'Success' if result else 'Exists'}
+    except Exception as ex:
+        return {"status": 'Failed'}
+
+
 @app.post("/stk-reversal-callback")
 async def stk_reversal_callback():
-    return {"Hello": "World"}
-
-
-@app.post("/c2b-callback")
-async def c2b_callback():
     return {"Hello": "World"}
 
 
