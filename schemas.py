@@ -2,6 +2,35 @@ from pydantic import BaseModel
 from typing import Optional, List
 
 
+class NameValue(BaseModel):
+    Name: str
+    Value: Optional[str] = None
+
+
+class KeyValue(BaseModel):
+    Key: str
+    Value: Optional[str] = None
+
+
+class ReferenceData(BaseModel):
+    ReferenceItem: KeyValue
+
+
+class ResultParameters(BaseModel):
+    ResultParameter: List[KeyValue]
+
+
+class CallbackResult(BaseModel):
+    ResultType: int
+    ResultCode: int
+    ResultDesc: str
+    OriginatorConversationID: str
+    ConversationID: str
+    TransactionID: str
+    ResultParameters: ResultParameters
+    ReferenceData: ReferenceData
+
+
 # Africastalking Schemas
 class ATCallback(BaseModel):
     phoneNumber: str
@@ -34,13 +63,8 @@ class KyandaCallback(BaseModel):
 
 
 # mpesa stk callback
-class CallbackMetadataItem(BaseModel):
-    Name: str
-    Value: Optional[str] = None
-
-
 class CallbackMetadata(BaseModel):
-    Item: List[CallbackMetadataItem]
+    Item: List[NameValue]
 
 
 class StkCallback(BaseModel):
@@ -60,12 +84,6 @@ class StkPushCallback(BaseModel):
 
 
 # mpesa c2b callback
-x = {'TransactionType': 'Customer Merchant Payment', 'TransID': 'PLU8V56Y5C', 'TransTime': '20211230104939',
-     'TransAmount': '98.00', 'BusinessShortCode': '7195415', 'BillRefNumber': '', 'InvoiceNumber': '',
-     'OrgAccountBalance': '11952.81', 'ThirdPartyTransID': '', 'MSISDN': '254708720306', 'FirstName': 'kenneth',
-     'MiddleName': 'kihanya', 'LastName': 'waweru'}
-
-
 class C2BCallback(BaseModel):
     TransactionType: str
     TransID: str
@@ -80,3 +98,13 @@ class C2BCallback(BaseModel):
     FirstName: str
     MiddleName: str
     LastName: str
+
+
+# mpesa transaction_status_callback
+class TransactionStatusCallback(BaseModel):
+    Result: CallbackResult
+
+
+# mpesa reversal Callback
+class ReversalCallback(BaseModel):
+    Result: CallbackResult
