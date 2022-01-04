@@ -108,3 +108,12 @@ class TransactionStatusCallback(BaseModel):
 # mpesa reversal Callback
 class ReversalCallback(BaseModel):
     Result: CallbackResult
+
+
+# KYANDA
+class kyandaBillTransaction(BaseModel):
+    amount: str
+    account: str
+    telco: str
+    initiator_phone: str
+    transaction_id: str

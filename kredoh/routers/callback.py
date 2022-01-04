@@ -1,9 +1,8 @@
-from typing import Optional, Dict
+from typing import Optional
 
 from fastapi import Path, Request, APIRouter
-from google.cloud import firestore
 
-from kredoh.callbacks.schemas import ATCallback, KyandaCallback, StkPushCallback, C2BCallback, \
+from .schemas import ATCallback, KyandaCallback, StkPushCallback, C2BCallback, \
     TransactionStatusCallback, ReversalCallback
 
 debug = True
@@ -11,23 +10,6 @@ router = APIRouter(
     tags=['Callback'],
     prefix='/callback'
 )
-
-
-def store_to_firestore(ref: str, data: Dict, path: str):
-    table_name = 'CALLBACKS'
-    if debug:
-        table_name += '_TEST'
-    db = firestore.Client()
-    doc_ref = db.collection(table_name.lower()).document(ref)
-    doc = doc_ref.get()
-    if not doc.exists:
-        content = {'path': path,
-                   'data': data,
-                   'ref': ref}
-        doc_ref.set(content)
-        return True
-
-    return False
 
 
 @router.get("/")
